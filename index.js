@@ -1,31 +1,39 @@
-let express = require("express");
-let app = express();
-let http = require("http").Server(app);
-let io = require("socket.io")(http);
+const express = require("express");
+const app = express();
+const http = require("http").Server(app);
+const io = require("socket.io")(http);
+const path = require("path");
 let canvasData;
 
-app.use("/css", express.static(__dirname + "/css"));
-app.use("/js", express.static(__dirname + "/js"));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.get("/", function (req, res) {
-  res.sendFile(__dirname + "/index.html");
+  res.sendFile(__dirname + "/views/index.html");
+});
+
+app.get("/v2", function (req, res) {
+  res.sendFile(__dirname + "/views/konvas.html");
 });
 
 io.on("connection", function (socket) {
-  console.log("a user connected", socket.id);
+  const userId = socket.id;
+  console.log("a user connected", userId);
   // socket.broadcast.to(socket.id).emit('drawing', canvasData);
 
   socket.on("disconnect", function () {
-    console.log("user disconnected");
+    console.log("user disconnected", userId);
   });
 
   socket.on("ready", function (msg) {
     console.log(msg);
+    io.to(userId).emit("user", userId);
+
   });
 
   socket.on("drawing", function (canvasJson) {
     console.log("Drawing");
     canvasData = canvasJson;
+    canvasData.userId = userId;
     socket.broadcast.emit("drawing", canvasData);
   });
 
@@ -41,7 +49,7 @@ io.on("connection", function (socket) {
     socket.broadcast.emit("paning", canvasData);
   });
 });
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 5000;
 
 http.listen(port, function () {
   console.log(`listening on *:${port}`);
