@@ -145,7 +145,7 @@ $(function () {
   });
   canvas.add(text);
 
-  //canvas events
+  //canvas events 
   canvas.on("after:render", function () {
     if (!isLoadedFromJson) {
       emitEvent();
