@@ -25,7 +25,30 @@
   </head>
   <body>
     <div class="container">
-      <div class="row" style="height: 800px">
+      <div class="row">
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="open"
+          data-type="open"
+        >
+          Open whiteboard
+        </button>
+        <div>
+          <span>Status</span>
+          <span class="status">offline</span>
+        </div>
+        <button type="button" class="btn btn-info" id="reconnect">
+          Reconnect
+        </button>
+        <button type="button" class="btn btn-danger" id="disconnect">
+          Disconnect
+        </button>
+      </div>
+      <ul class="list-group" id="userList">
+        <li class="list-group-item">Cras justo odio</li>
+      </ul>
+      <div class="row whiteboard" style="height: 800px; display: none">
         <div class="col-1 col-md-2">
           <div class="d-flex flex-row align-items-start toolbar">
             <div class="btn-group-vertical my-5">
@@ -248,6 +271,7 @@
     <script src="/public/js/fabric.min.js"></script>
     <script src="/public/js/shapes.fabric.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/public/js/script.js"></script>
+    <!-- <script src="/public/js/script.js"></script> -->
+    <script src="/public/js/main.js"></script>
   </body>
 </html>

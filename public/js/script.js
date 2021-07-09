@@ -1,5 +1,13 @@
-let socket = io();
+const person = prompt("Please enter your code");
+let socket;
 
+// if(person === 'admin') {
+//   socket = io({
+//     auth: {
+//       token: "admin",
+//     },
+//   });
+// } else ()
 let canvas = new fabric.Canvas("c");
 let line, triangle, origX, origY;
 let thisUserId;
@@ -74,7 +82,7 @@ function deleteObjects() {
 
 function emitEvent() {
   let aux = canvas;
-  let json = aux.toJSON(['myOwner']);
+  let json = aux.toJSON(["myOwner"]);
   let data = {
     w: w,
     h: h,
@@ -141,7 +149,7 @@ $(function () {
     lockMovementY: true,
     backgroundColor: "#FFFFFF",
     visible: false,
-    excludeFromExport: true
+    excludeFromExport: true,
   });
   canvas.add(text);
 
@@ -151,7 +159,7 @@ $(function () {
       emitEvent();
     }
     isLoadedFromJson = false;
-    console.log(canvas.toJSON(['myOwner']));
+    console.log(canvas.toJSON(["myOwner"]));
   });
 
   canvas.on("mouse:wheel", function (opt) {
@@ -176,14 +184,14 @@ $(function () {
     const target = e.target;
     if (target) {
       const pointer = canvas.getPointer(e.e);
-      const objType = target.get('type');
-      if (objType === 'path') {
+      const objType = target.get("type");
+      if (objType === "path") {
         text.set({
           top: Math.abs(pointer.y),
           left: Math.abs(pointer.x),
           visible: true,
-          text: target.myOwner
-        })
+          text: target.myOwner,
+        });
         text.setCoords();
         // target.set({
         //   stroke: 'red'
@@ -192,41 +200,41 @@ $(function () {
       canvas.bringToFront(text);
       canvas.renderAll();
     }
-  })
+  });
 
   canvas.on("mouse:move", function (e) {
     const target = e.target;
     if (target) {
       const pointer = canvas.getPointer(e.e);
-      const objType = target.get('type');
-      if (objType === 'path') {
+      const objType = target.get("type");
+      if (objType === "path") {
         text.set({
           top: Math.abs(pointer.y),
           left: Math.abs(pointer.x),
-        })
+        });
       }
       canvas.renderAll();
     }
-  })
+  });
 
   canvas.on("mouse:out", function (e) {
     const target = e.target;
     if (target) {
-      const objType = target.get('type');
-      if (objType === 'path') {
+      const objType = target.get("type");
+      if (objType === "path") {
         target.set({
-          stroke: 'black'
+          stroke: "black",
         });
         text.set({
-          visible: false
-        })
+          visible: false,
+        });
       }
       canvas.renderAll();
     }
-  })
+  });
 
-  canvas.on('path:created', function (e) {
-    console.log("created")
+  canvas.on("path:created", function (e) {
+    console.log("created");
     const drawPath = e.path;
 
     // hover per pixel to fine the target -> perPixelTargetFind
@@ -236,9 +244,8 @@ $(function () {
       // lockMovementX: true,
       // lockMovementY: true,
       myOwner: thisUserId,
-      myHoverColor: 'red'
-    })
-
+      myHoverColor: "red",
+    });
   });
 
   // if path is selected, remove perPixelTargetFind
@@ -246,23 +253,22 @@ $(function () {
   canvas.on("mouse:up", function () {
     const activedObjs = canvas.getActiveObjects();
     if (activedObjs.length) {
-      activedObjs.map(obj => {
+      activedObjs.map((obj) => {
         const objType = obj.get("type");
-        if (objType === 'path') {
+        if (objType === "path") {
           obj.perPixelTargetFind = false;
           pathObjs.indexOf(obj) === -1 && pathObjs.push(obj);
         }
-      })
+      });
     } else {
       if (pathObjs.length) {
-        pathObjs.map(path => {
+        pathObjs.map((path) => {
           path.perPixelTargetFind = true;
-        })
+        });
         pathObjs.splice(0);
       }
     }
-
-  })
+  });
 
   //dynamically resize the canvas on window resize
   $(window)
@@ -533,11 +539,16 @@ $(function () {
   canvas.renderAll();
 
   //Sockets
+  socket.on("connect_error", (err) => {
+    console.log(err instanceof Error);
+    console.log(err.message);
+    console.log(err.data);
+  });
   socket.emit("ready", "Page loaded");
 
   socket.on("user", function (userId) {
     thisUserId = userId;
-  })
+  });
 
   socket.on("drawing", function (obj) {
     //set this flag, to disable infinite rendering loop
