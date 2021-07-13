@@ -1,7 +1,12 @@
 const express = require("express");
 const app = express();
 const http = require("http").Server(app);
-const io = require("socket.io")(http);
+const io = require("socket.io")(http, {
+  cors: {
+    origin: "*",
+    // methods: ["GET", "POST"],
+  },
+});
 const path = require("path");
 let canvasData;
 
@@ -12,7 +17,7 @@ app.get("/", function (req, res) {
 });
 
 app.get("/v2", function (req, res) {
-  res.sendFile(__dirname + "/views/konvas.html");
+  res.sendFile(__dirname + "/views/konva.html");
 });
 
 io.on("connection", function (socket) {
@@ -27,7 +32,6 @@ io.on("connection", function (socket) {
   socket.on("ready", function (msg) {
     console.log(msg);
     io.to(userId).emit("user", userId);
-
   });
 
   socket.on("drawing", function (canvasJson) {
@@ -47,6 +51,42 @@ io.on("connection", function (socket) {
     console.log("Paning");
     canvasData = canvasPan;
     socket.broadcast.emit("paning", canvasData);
+  });
+
+  socket.on("draw-line", function (input) {
+    console.log("Drawing");
+    const data = {
+      ...input,
+      userId,
+    };
+    socket.broadcast.emit("draw-line", data);
+  });
+
+  socket.on("add-text", function (input) {
+    console.log("Add text");
+    const data = {
+      ...input,
+      userId,
+    };
+    socket.broadcast.emit("add-text", data);
+  });
+
+  socket.on("change-text", function (input) {
+    console.log("Change text");
+    const data = {
+      ...input,
+      userId,
+    };
+    socket.broadcast.emit("change-text", data);
+  });
+
+  socket.on("move-text", function (input) {
+    console.log("Move text");
+    const data = {
+      ...input,
+      userId,
+    };
+    socket.broadcast.emit("move-text", data);
   });
 });
 const port = process.env.PORT || 5000;
