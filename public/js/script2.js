@@ -10,6 +10,7 @@ let mode = {
   isTextMode: false,
 };
 let drawing = false;
+const users = [];
 
 //init variables
 let div = $("#canvasWrapper");
@@ -43,10 +44,6 @@ function initCanvas(canvas) {
 }
 
 function emitDrawingEvent(emit, drawingData) {
-  console.log(
-    "🚀 ~ file: script2.js ~ line 45 ~ emitDrawingEvent ~ emit",
-    emit
-  );
   let aux = canvas;
   let json = aux.toJSON(["myOwner"]);
   let data = {
@@ -83,8 +80,6 @@ $(document).ready(function () {
   //Canvas init
   initCanvas(canvas);
 
-  const brush = new fabric.PencilBrush(canvas);
-
   canvas.on("mouse:wheel", function (opt) {
     var delta = opt.e.deltaY;
     var zoom = canvas.getZoom();
@@ -103,28 +98,16 @@ $(document).ready(function () {
     opt.e.stopPropagation();
   });
 
-  canvas.on("path:created", function (e) {
-    console.log("🚀 ~ file: script2.js ~ line 107 ~ canvas.on ~ e", e);
-
-    // brush.onMouseDown(start);
-    const drawData = {
-      pointer: end,
-      during: true,
-    };
-
-    // emitDrawingEvent(true, drawData);
-  });
-
   canvas.on("mouse:down", function (eD) {
     if (canvas.isDrawingMode) {
       drawing = true;
       console.log("down");
-      const pointer = canvas.getPointer(eD.e);
-      console.log("🚀 ~ file: script2.js ~ line 126 ~ pointer", pointer);
+      const pos = canvas.getPointer(eD.e);
       // const { x, y } = eD.e;
       const drawData = {
-        pointer,
+        pos,
         start: true,
+        newLine: true,
       };
       emitDrawingEvent(true, drawData);
 
@@ -132,21 +115,22 @@ $(document).ready(function () {
     }
   });
 
-  // canvas.on("mouse:move", function (eM) {
-  //   if (canvas.isDrawingMode) {
-  //     if (drawing) {
-  //       const pointer = canvas.getPointer(eM.e);
+  canvas.on("mouse:move", function (eM) {
+    if (canvas.isDrawingMode) {
+      if (drawing) {
+        const pos = canvas.getPointer(eM.e);
 
-  //       const drawData = {
-  //         pointer,
-  //         during: true,
-  //       };
+        const drawData = {
+          pos,
+          during: true,
+          newLine: false,
+        };
 
-  //       // brush.onMouseMove({ x: pointer.x, y: pointer.y });
-  //       emitDrawingEvent(true, drawData);
-  //     }
-  //   }
-  // });
+        // brush.onMouseMove({ x: pointer.x, y: pointer.y });
+        emitDrawingEvent(true, drawData);
+      }
+    }
+  });
 
   canvas.on("mouse:up", function () {
     // brush.onMouseUp();
@@ -155,6 +139,7 @@ $(document).ready(function () {
       console.log("up");
       const drawData = {
         end: true,
+        newLine: false,
       };
       emitDrawingEvent(true, drawData);
     }
@@ -269,44 +254,31 @@ $(document).ready(function () {
   });
 
   socket.on("drawing", function (data) {
-    //set this flag, to disable infinite rendering loop
-    // isLoadedFromJson = true;
+    const { userId, obj } = data;
+    const { start, during, end, pos } = obj;
+    console.log(users);
+    const found = users.find((user) => user.userId === userId);
+    console.log("🚀 ~ file: script2.js ~ line 260 ~ found", found);
+    if (found) {
+      if (start) {
+        // found.line = new fabric.PencilBrush(canvas);
+        found.line.onMouseDown({ x: pos.x, y: pos.y });
+      }
 
-    const { obj } = data;
-    if (obj.start) {
-      console.log("🚀 ~ file: script2.js ~ line 282 ~ obj", obj);
-      brush.onMouseDown({ x: obj.pointer.x, y: obj.pointer.y });
+      if (during) {
+        found.line.onMouseMove({ x: pos.x, y: pos.y });
+      }
+
+      if (end) {
+        found.line.onMouseUp();
+      }
+    } else {
+      users.push({
+        userId,
+        line: new fabric.PencilBrush(canvas),
+      });
+      // users.slice(-1)[0].line.onMouseDown({ x: pos.x, y: pos.y });
     }
-
-    if (obj.during) {
-      brush.onMouseMove({ x: obj.pointer.x, y: obj.pointer.y });
-    }
-
-    if (obj.end) {
-      console.log("brush mouse up");
-      brush.onMouseUp();
-    }
-
-    // console.log(
-    //   "%csocket.js line:18 test",
-    //   "color: white; background-color: #26bfa5;",
-    //   test
-    // );
-
-    // let path;
-    // if (obj && obj.clientX && obj.clientY) {
-    //   path = new fabric.Path(`M 0 0`, {
-    //     left: obj.clientX,
-    //     top: obj.clientY,
-    //     stroke: "black",
-    //   });
-    //   console.log("%csocket.js line:22 path", "color: #007acc;", path);
-
-    //   canvas.add(path);
-    // } else if (obj) {
-    //   path.path = obj;
-    //   console.log("%csocket.js line:27 path2", "color: #007acc;", path);
-    // }
   });
 
   socket.on("zooming", function (obj) {
