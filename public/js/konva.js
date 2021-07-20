@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io("http://192.168.1.3:5000/");
 
 var width = window.innerWidth;
 var height = window.innerHeight - 25;
@@ -18,9 +18,12 @@ var mode = "brush";
 var lastLine;
 
 const users = [];
+const temp = {
+  isTransform: false,
+};
 
 const setupPaint = () => {
-  stage.on("mousedown touchstart", function (e) {
+  stage.on("mousedown.paint", function (e) {
     isPaint = true;
     var pos = stage.getPointerPosition();
     lastLine = new Konva.Line({
@@ -34,18 +37,18 @@ const setupPaint = () => {
       lineCap: "round",
     });
     layer.add(lastLine);
-    socket.emit("draw-line", {
+    socket.emit("drawing", {
       newLine: true,
       pos,
     });
   });
 
-  stage.on("mouseup touchend", function () {
+  stage.on("mouseup.paint", function () {
     isPaint = false;
   });
 
-  // and core function - draw-line
-  stage.on("mousemove touchmove", function () {
+  // and core function - drawing
+  stage.on("mousemove.paint", function () {
     if (!isPaint) {
       return;
     }
@@ -53,16 +56,16 @@ const setupPaint = () => {
     const pos = stage.getPointerPosition();
     var newPoints = lastLine.points().concat([pos.x, pos.y]);
     lastLine.points(newPoints);
-    socket.emit("draw-line", {
+    socket.emit("drawing", {
       newLine: false,
       pos: newPoints,
     });
   });
 };
 
-const removeAllEvents = () => {
-  stage.off();
-};
+// const removeAllEvents = () => {
+//   stage.off();
+// };
 
 const $paint = $("#paint");
 const $text = $("#text");
@@ -74,18 +77,65 @@ $paint.click(function () {
     // change btn
     $(this).text("Stop paint").data("value", "stop");
   } else {
-    removeAllEvents();
+    stage.off("mousedown.paint");
+    stage.off("mouseup.paint");
+    stage.off("mousemove.paint");
     // change btn
     $(this).text("Paint").data("value", "paint");
   }
 });
-// select.addEventListener("change", function () {
-//   mode = select.value;
+
+const rotatePoint = ({ x, y }, rad) => {
+  const rcos = Math.cos(rad);
+  const rsin = Math.sin(rad);
+  return { x: x * rcos - y * rsin, y: y * rcos + x * rsin };
+};
+
+// will work for shapes with top-left origin, like rectangle
+function rotateAroundCenter(node, rotation) {
+  //current rotation origin (0, 0) relative to desired origin - center (node.width()/2, node.height()/2)
+  const topLeft = { x: -node.width() / 2, y: -node.height() / 2 };
+  const current = rotatePoint(topLeft, Konva.getAngle(node.rotation()));
+  const rotated = rotatePoint(topLeft, Konva.getAngle(rotation));
+  const dx = rotated.x - current.x,
+    dy = rotated.y - current.y;
+
+  node.rotation(rotation);
+  node.x(node.x() + dx);
+  node.y(node.y() + dy);
+}
+
+const transformer = new Konva.Transformer({
+  // node: lastText,
+  enabledAnchors: ["middle-left", "middle-right"],
+  // set minimum width of text
+  boundBoxFunc: function (oldBox, newBox) {
+    newBox.width = Math.max(30, newBox.width);
+    return newBox;
+  },
+});
+
+layer.add(transformer);
+
+// // cancel transform
+// stage.on("mousedown", () => {
+//   const [node] = transformer.nodes();
+//   console.log("🚀 ~ file: index.js ~ line 123 ~ stage.on ~ node", node);
+//   if (node) {
+//     console.log(
+//       "%c Rainbowww!",
+//       "font-weight: bold; font-size: 50px;color: red; text-shadow: 3px 3px 0 rgb(217,31,38) , 6px 6px 0 rgb(226,91,14) , 9px 9px 0 rgb(245,221,8) , 12px 12px 0 rgb(5,148,68) , 15px 15px 0 rgb(2,135,206) , 18px 18px 0 rgb(4,77,145) , 21px 21px 0 rgb(42,21,113); margin-bottom: 12px; padding: 5%;"
+//     );
+//     node.draggable(false);
+//     transformer.detach();
+//     transformer.borderEnabled(false);
+//     // temp.isTransform = false;
+//   }
 // });
 
 const setupText = () => {
   const id = `text-${Date.now()}`;
-  stage.on("mousedown touchstart", function (e) {
+  stage.on("mousedown.text", function (e) {
     const pos = stage.getPointerPosition();
     const lastText = new Konva.Text({
       text: "Some text here",
@@ -97,25 +147,8 @@ const setupText = () => {
       id,
     });
     layer.add(lastText);
-    var tr = new Konva.Transformer({
-      node: lastText,
-      enabledAnchors: ["middle-left", "middle-right"],
-      // set minimum width of text
-      boundBoxFunc: function (oldBox, newBox) {
-        newBox.width = Math.max(30, newBox.width);
-        return newBox;
-      },
-    });
 
-    lastText.on("transform", function () {
-      // reset scale, so only with is changing by transformer
-      lastText.setAttrs({
-        width: lastText.width() * lastText.scaleX(),
-        scaleX: 1,
-      });
-    });
-
-    layer.add(tr);
+    transformer.nodes([lastText]);
 
     lastText.on("dblclick dbltap", () => {
       // hide text node and transformer:
@@ -259,13 +292,30 @@ const setupText = () => {
       });
     });
 
+    lastText.on("transform", function () {
+      // reset scale, so only with is changing by transformer
+      lastText.setAttrs({
+        width: lastText.width() * lastText.scaleX(),
+        scaleX: 1,
+      });
+
+      const rotation = lastText.rotation();
+      const width = lastText.width();
+
+      socket.emit("transform-text", {
+        rotation,
+        width,
+        id,
+      });
+    });
+
     lastText.on("dragmove", () => {
       const pos = {
         x: lastText.x(),
         y: lastText.y(),
       };
       // const id = lastText.id();
-      socket.emit("move-text", {
+      socket.emit("transform-text", {
         pos,
         id,
       });
@@ -277,8 +327,9 @@ const setupText = () => {
     });
   });
 
-  stage.on("mouseup touchend", function (e) {
+  stage.on("mouseup.text", function (e) {
     $text.trigger("click");
+    // temp.isTransform = true;
   });
 };
 
@@ -289,13 +340,14 @@ $text.click(function () {
     // change btn
     $(this).text("Stop text").data("value", "stop");
   } else {
-    removeAllEvents();
+    stage.off("mousedown.text");
+    stage.off("mouseup.text");
     // change btn
     $(this).text("Text").data("value", "text");
   }
 });
 
-socket.on("draw-line", (data) => {
+socket.on("drawing", (data) => {
   const { newLine, pos, userId } = data;
   const found = users.find((user) => user.userId === userId);
   if (found) {
@@ -378,9 +430,21 @@ socket.on("change-text", (data) => {
   shape.text(value);
 });
 
-socket.on("move-text", (data) => {
-  const { pos, id } = data;
+socket.on("transform-text", (data) => {
+  const { pos, rotation, width, id } = data;
   const shape = stage.find(`#${id}`)[0];
-  shape.x(pos.x);
-  shape.y(pos.y);
+
+  if (pos) {
+    shape.x(pos.x);
+    shape.y(pos.y);
+  }
+
+  if (rotation) {
+    rotateAroundCenter(shape, rotation);
+    // shape.rotation(rotation);
+  }
+
+  if (width) {
+    shape.width(width);
+  }
 });
