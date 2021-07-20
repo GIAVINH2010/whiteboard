@@ -80,13 +80,13 @@ io.on("connection", function (socket) {
     socket.broadcast.emit("change-text", data);
   });
 
-  socket.on("move-text", function (input) {
+  socket.on("transform-text", function (input) {
     console.log("Move text");
     const data = {
       ...input,
       userId,
     };
-    socket.broadcast.emit("move-text", data);
+    socket.broadcast.emit("transform-text", data);
   });
 });
 const port = process.env.PORT || 5000;
