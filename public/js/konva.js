@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io("");
 
 var width = window.innerWidth;
 var height = window.innerHeight - 25;
@@ -13,14 +13,12 @@ var stage = new Konva.Stage({
 var layer = new Konva.Layer();
 stage.add(layer);
 
-var isPaint = false;
+let isPaint = false;
 var mode = "brush";
 var lastLine;
 
 const users = [];
-const temp = {
-  isTransform: false,
-};
+let textEditing = false;
 
 const setupPaint = () => {
   stage.on("mousedown.paint", function (e) {
@@ -73,10 +71,13 @@ const $text = $("#text");
 $paint.click(function () {
   const val = $(this).data("value");
   if (val === "paint") {
+    stage.container().style.cursor = "crosshair";
+
     setupPaint();
     // change btn
     $(this).text("Stop paint").data("value", "stop");
   } else {
+    stage.container().style.cursor = "auto";
     stage.off("mousedown.paint");
     stage.off("mouseup.paint");
     stage.off("mousemove.paint");
@@ -117,22 +118,6 @@ const transformer = new Konva.Transformer({
 
 layer.add(transformer);
 
-// // cancel transform
-// stage.on("mousedown", () => {
-//   const [node] = transformer.nodes();
-//   console.log("🚀 ~ file: index.js ~ line 123 ~ stage.on ~ node", node);
-//   if (node) {
-//     console.log(
-//       "%c Rainbowww!",
-//       "font-weight: bold; font-size: 50px;color: red; text-shadow: 3px 3px 0 rgb(217,31,38) , 6px 6px 0 rgb(226,91,14) , 9px 9px 0 rgb(245,221,8) , 12px 12px 0 rgb(5,148,68) , 15px 15px 0 rgb(2,135,206) , 18px 18px 0 rgb(4,77,145) , 21px 21px 0 rgb(42,21,113); margin-bottom: 12px; padding: 5%;"
-//     );
-//     node.draggable(false);
-//     transformer.detach();
-//     transformer.borderEnabled(false);
-//     // temp.isTransform = false;
-//   }
-// });
-
 const setupText = () => {
   const id = `text-${Date.now()}`;
   stage.on("mousedown.text", function (e) {
@@ -151,9 +136,10 @@ const setupText = () => {
     transformer.nodes([lastText]);
 
     lastText.on("dblclick dbltap", () => {
+      textEditing = true;
       // hide text node and transformer:
       lastText.hide();
-      tr.hide();
+      transformer.hide();
 
       // create textarea over canvas with absolute position
       // first we need to find position for textarea
@@ -224,8 +210,8 @@ const setupText = () => {
         textarea.parentNode.removeChild(textarea);
         window.removeEventListener("click", handleOutsideClick);
         lastText.show();
-        tr.show();
-        tr.forceUpdate();
+        transformer.show();
+        transformer.forceUpdate();
       }
 
       function setTextareaWidth(newWidth) {
@@ -285,6 +271,7 @@ const setupText = () => {
         if (e.target !== textarea) {
           lastText.text(textarea.value);
           removeTextarea();
+          textEditing = false;
         }
       }
       setTimeout(() => {
@@ -329,17 +316,42 @@ const setupText = () => {
 
   stage.on("mouseup.text", function (e) {
     $text.trigger("click");
-    // temp.isTransform = true;
+
+    stage.on("mousedown", () => {
+      if (textEditing) {
+        return;
+      }
+      const pos = layer.getStage().getPointerPosition();
+      const shape = layer.getIntersection(pos);
+      const [node] = transformer.nodes();
+
+      if (!shape) {
+        transformer.detach();
+        transformer.getLayer().batchDraw();
+        return;
+      }
+
+      if (shape === node) {
+        return;
+      }
+
+      if (shape.id()) {
+        transformer.nodes([shape]);
+      }
+      transformer.getLayer().batchDraw();
+    });
   });
 };
 
 $text.click(function () {
   const val = $(this).data("value");
   if (val === "text") {
+    stage.container().style.cursor = "text";
     setupText();
     // change btn
     $(this).text("Stop text").data("value", "stop");
   } else {
+    stage.container().style.cursor = "auto";
     stage.off("mousedown.text");
     stage.off("mouseup.text");
     // change btn
