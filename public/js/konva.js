@@ -1,4 +1,4 @@
-const socket = io("http://192.168.1.3:5000/");
+const socket = io();
 
 var width = window.innerWidth;
 var height = window.innerHeight - 25;
