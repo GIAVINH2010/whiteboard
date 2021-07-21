@@ -1,4 +1,4 @@
-const socket = io("");
+const socket = io();
 
 var width = window.innerWidth;
 var height = window.innerHeight - 25;
@@ -13,17 +13,67 @@ var stage = new Konva.Stage({
 var layer = new Konva.Layer();
 stage.add(layer);
 
+const transformer = new Konva.Transformer({
+  // node: lastText,
+  enabledAnchors: ["middle-left", "middle-right"],
+  // set minimum width of text
+  boundBoxFunc: function (oldBox, newBox) {
+    newBox.width = Math.max(30, newBox.width);
+    return newBox;
+  },
+});
+
+layer.add(transformer);
+
 let isPaint = false;
 var mode = "brush";
 var lastLine;
-
 const users = [];
 let textEditing = false;
+const scaleBy = 1.05;
+let zoomingNPaning = false;
+
+const $paint = $("#paint");
+const $text = $("#text");
+const $zandp = $("#zandp");
+
+const rotatePoint = ({ x, y }, rad) => {
+  const rcos = Math.cos(rad);
+  const rsin = Math.sin(rad);
+  return { x: x * rcos - y * rsin, y: y * rcos + x * rsin };
+};
+
+// will work for shapes with top-left origin, like rectangle
+function rotateAroundCenter(node, rotation) {
+  //current rotation origin (0, 0) relative to desired origin - center (node.width()/2, node.height()/2)
+  const topLeft = { x: -node.width() / 2, y: -node.height() / 2 };
+  const current = rotatePoint(topLeft, Konva.getAngle(node.rotation()));
+  const rotated = rotatePoint(topLeft, Konva.getAngle(rotation));
+  const dx = rotated.x - current.x,
+    dy = rotated.y - current.y;
+
+  node.rotation(rotation);
+  node.x(node.x() + dx);
+  node.y(node.y() + dy);
+}
 
 const setupPaint = () => {
   stage.on("mousedown.paint", function (e) {
     isPaint = true;
-    var pos = stage.getPointerPosition();
+    console.log("stage.x()", stage.x());
+    console.log("stage.y()", stage.y());
+
+    console.log("layer.x()", layer.x());
+    console.log("layer.y()", layer.y());
+
+    const pos = stage.getRelativePointerPosition();
+    // const pos = stage.getPointerPosition();
+
+    // const pos = transform.point({
+    //   x: pointer.x,
+    //   y: pointer.y,
+    // });
+
     lastLine = new Konva.Line({
       stroke: "#df4b26",
       strokeWidth: 5,
@@ -50,8 +100,8 @@ const setupPaint = () => {
     if (!isPaint) {
       return;
     }
-
-    const pos = stage.getPointerPosition();
+    const pos = layer.getRelativePointerPosition();
+    // const pos = stage.getPointerPosition();
     var newPoints = lastLine.points().concat([pos.x, pos.y]);
     lastLine.points(newPoints);
     socket.emit("drawing", {
@@ -60,63 +110,6 @@ const setupPaint = () => {
     });
   });
 };
-
-// const removeAllEvents = () => {
-//   stage.off();
-// };
-
-const $paint = $("#paint");
-const $text = $("#text");
-
-$paint.click(function () {
-  const val = $(this).data("value");
-  if (val === "paint") {
-    stage.container().style.cursor = "crosshair";
-
-    setupPaint();
-    // change btn
-    $(this).text("Stop paint").data("value", "stop");
-  } else {
-    stage.container().style.cursor = "auto";
-    stage.off("mousedown.paint");
-    stage.off("mouseup.paint");
-    stage.off("mousemove.paint");
-    // change btn
-    $(this).text("Paint").data("value", "paint");
-  }
-});
-
-const rotatePoint = ({ x, y }, rad) => {
-  const rcos = Math.cos(rad);
-  const rsin = Math.sin(rad);
-  return { x: x * rcos - y * rsin, y: y * rcos + x * rsin };
-};
-
-// will work for shapes with top-left origin, like rectangle
-function rotateAroundCenter(node, rotation) {
-  //current rotation origin (0, 0) relative to desired origin - center (node.width()/2, node.height()/2)
-  const topLeft = { x: -node.width() / 2, y: -node.height() / 2 };
-  const current = rotatePoint(topLeft, Konva.getAngle(node.rotation()));
-  const rotated = rotatePoint(topLeft, Konva.getAngle(rotation));
-  const dx = rotated.x - current.x,
-    dy = rotated.y - current.y;
-
-  node.rotation(rotation);
-  node.x(node.x() + dx);
-  node.y(node.y() + dy);
-}
-
-const transformer = new Konva.Transformer({
-  // node: lastText,
-  enabledAnchors: ["middle-left", "middle-right"],
-  // set minimum width of text
-  boundBoxFunc: function (oldBox, newBox) {
-    newBox.width = Math.max(30, newBox.width);
-    return newBox;
-  },
-});
-
-layer.add(transformer);
 
 const setupText = () => {
   const id = `text-${Date.now()}`;
@@ -260,7 +253,6 @@ const setupText = () => {
       textarea.addEventListener("input", function () {
         const value = textarea.value;
         const id = textarea.getAttribute("data-id");
-        console.log("🚀 ~ file: index.js ~ line 244 ~ id", id);
         socket.emit("change-text", {
           value,
           id,
@@ -343,6 +335,61 @@ const setupText = () => {
   });
 };
 
+const setupZoomNPan = () => {
+  zoomingNPaning = true;
+  stage.on("wheel", (e) => {
+    e.evt.preventDefault();
+    const oldScale = stage.scaleX();
+
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newScale = e.evt.deltaY > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+    // change cursor
+    if (e.evt.deltaY > 0) {
+      stage.container().style.cursor = "zoom-in";
+    } else {
+      stage.container().style.cursor = "zoom-out";
+    }
+
+    stage.scale({ x: newScale, y: newScale });
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+    stage.position(newPos);
+
+    socket.emit("zooming", {
+      newScale,
+      newPos,
+    });
+  });
+};
+
+$paint.click(function () {
+  const val = $(this).data("value");
+  if (val === "paint") {
+    stage.container().style.cursor = "crosshair";
+
+    setupPaint();
+    // change btn
+    $(this).text("Stop paint").data("value", "stop");
+  } else {
+    stage.container().style.cursor = "auto";
+    stage.off("mousedown.paint");
+    stage.off("mouseup.paint");
+    stage.off("mousemove.paint");
+    // change btn
+    $(this).text("Paint").data("value", "paint");
+  }
+});
+
 $text.click(function () {
   const val = $(this).data("value");
   if (val === "text") {
@@ -358,6 +405,62 @@ $text.click(function () {
     $(this).text("Text").data("value", "text");
   }
 });
+
+$zandp.click(function () {
+  const val = $(this).data("value");
+  if (val === "zandp") {
+    stage.container().style.cursor = "zoom-in";
+    setupZoomNPan();
+    // change btn
+    $(this).text("Stop zooming and paning").data("value", "stop");
+  } else {
+    stage.container().style.cursor = "auto";
+    stage.off("wheel");
+    // change btn
+    $(this).text("Zoom & Pan").data("value", "zandp");
+  }
+});
+
+$(document)
+  .on("keydown", function (e) {
+    if (e.keyCode === 18 && zoomingNPaning) {
+      stage.draggable(true);
+
+      stage.container().style.cursor = "grab";
+
+      stage.on("mousedown", () => {
+        stage.container().style.cursor = "grabbing";
+
+        stage.on("mousemove", () => {
+          stage.container().style.cursor = "grabbing";
+        });
+      });
+
+      stage.on("mouseup", () => {
+        stage.off("mousemove");
+        stage.container().style.cursor = "grab";
+      });
+
+      stage.on("dragmove", () => {
+        const stagePos = {
+          x: stage.x(),
+          y: stage.y(),
+        };
+
+        socket.emit("paning", {
+          stagePos,
+        });
+      });
+    }
+  })
+  .on("keyup", function (e) {
+    if (e.keyCode === 18 && zoomingNPaning) {
+      stage.off("mousedown");
+      stage.off("mouseup");
+      stage.container().style.cursor = "zoom-in";
+      stage.draggable(false);
+    }
+  });
 
 socket.on("drawing", (data) => {
   const { newLine, pos, userId } = data;
@@ -459,4 +562,15 @@ socket.on("transform-text", (data) => {
   if (width) {
     shape.width(width);
   }
+});
+
+socket.on("zooming", (data) => {
+  const { newScale, newPos } = data;
+  stage.scale({ x: newScale, y: newScale });
+  stage.position(newPos);
+});
+
+socket.on("paning", (data) => {
+  const { stagePos } = data;
+  stage.position(stagePos);
 });
