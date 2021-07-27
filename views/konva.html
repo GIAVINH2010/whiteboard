@@ -8,21 +8,171 @@
       href="/public/css/images/whiteboard.png"
       type="image/png"
     />
+    <link rel="stylesheet" href="https://use.fontawesome.com/768f8bdd5c.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+      integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l"
+      crossorigin="anonymous"
+    />
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #f0f0f0;
+      .board {
+        border: 2px dashed rgb(199, 196, 196);
+        height: 800px;
+        width: 100%;
       }
     </style>
   </head>
 
   <body>
-    <button id="paint" data-value="paint">Paint</button>
+    <!-- <button id="paint" data-value="paint">Paint</button>
     <button id="text" data-value="text">Text</button>
-    <button id="zandp" data-value="zandp">Zoom & Pan</button>
-    <div id="container"></div>
+    <button id="zandp" data-value="zandp">Zoom & Pan</button> -->
+
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col">
+          <div class="p-2">
+            <h1 class="fs-2">Whiteboard 2.0</h1>
+          </div>
+        </div>
+        <div class="col">
+          <div class="d-flex justify-content-end p-2">
+            <button type="button" class="btn btn-outline-primary mr-2">
+              Primary
+            </button>
+            <button type="button" class="btn btn-outline-secondary mr-2">
+              Secondary
+            </button>
+            <button type="button" class="btn btn-outline-success mr-2">
+              Success
+            </button>
+            <button type="button" class="btn btn-outline-danger">Danger</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-9">
+          <div class="d-flex">
+            <div class="align-self-start mr-3">
+              <div class="d-flex flex-column">
+                <div
+                  class="btn-group-vertical btn-group-lg btn-group-toggle mb-2"
+                  id="toolbar"
+                  data-toggle="buttons"
+                >
+                  <label class="btn btn-primary active">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option1"
+                      value="pointer"
+                      checked
+                    />
+                    <i class="fa fa-mouse-pointer" aria-hidden="true"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option2"
+                      value="paint"
+                    />
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option3"
+                      value="eraser"
+                    />
+                    <i class="fa fa-eraser" aria-hidden="true"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input
+                      type="radio"
+                      name="options"
+                      id="option4"
+                      value="text"
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fill="currentColor"
+                        fill-rule="evenodd"
+                        d="M18 5.5h-5.25V18c0 .28.22.5.5.5h2a.75.75 0 1 1 0 1.5h-6.5a.75.75 0 1 1 0-1.5h2a.5.5 0 0 0 .5-.5V5.5H6a.5.5 0 0 0-.5.5v1.25a.75.75 0 0 1-1.5 0V5.5C4 4.67 4.67 4 5.5 4h13c.83 0 1.5.67 1.5 1.5v1.75a.75.75 0 1 1-1.5 0V6a.5.5 0 0 0-.5-.5z"
+                      ></path>
+                    </svg>
+                  </label>
+                </div>
+                <!-- <button
+                  type="button"
+                  class="btn btn-lg btn-primary"
+                  id="btnText"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill="currentColor"
+                      fill-rule="evenodd"
+                      d="M18 5.5h-5.25V18c0 .28.22.5.5.5h2a.75.75 0 1 1 0 1.5h-6.5a.75.75 0 1 1 0-1.5h2a.5.5 0 0 0 .5-.5V5.5H6a.5.5 0 0 0-.5.5v1.25a.75.75 0 0 1-1.5 0V5.5C4 4.67 4.67 4 5.5 4h13c.83 0 1.5.67 1.5 1.5v1.75a.75.75 0 1 1-1.5 0V6a.5.5 0 0 0-.5-.5z"
+                    ></path>
+                  </svg>
+                </button> -->
+              </div>
+            </div>
+            <div class="board" id="container"></div>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="card mb-3">
+            <div class="card-header">Options</div>
+            <div class="card-body">
+              <button type="button" class="btn btn-primary">
+                <i class="fa fa-undo" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="btn btn-primary">
+                <i class="fa fa-repeat" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card mb-3">
+            <div class="card-header">Board</div>
+            <div class="card-body">Change background color</div>
+          </div>
+
+          <div class="actions" id="textActions"></div>
+
+          <!-- <div class="card mb-3">
+            <div class="card-body">
+              <button
+                type="button"
+                class="btn btn-primary btn-block"
+                id="addText"
+              >
+                Add text
+              </button>
+            </div>
+          </div> -->
+
+          <div class="card mb-3">
+            <div class="card-header">Custom</div>
+            <div class="card-body">Change background color</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <div id="container"></div> -->
     <script src="https://unpkg.com/konva@8.1.1/konva.min.js"></script>
     <script
       src="https://code.jquery.com/jquery-3.6.0.slim.min.js"
@@ -34,6 +184,11 @@
       integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg"
       crossorigin="anonymous"
     ></script>
-    <script src="/public/js/konva.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns"
+      crossorigin="anonymous"
+    ></script>
+    <script type="module" src="/public/js/konva.js"></script>
   </body>
 </html>

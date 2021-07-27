@@ -14,6 +14,7 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.get("/", function (req, res) {
   res.sendFile(__dirname + "/views/index.html");
+  // res.sendFile(__dirname + "/views/konva.html");
 });
 
 app.get("/v2", function (req, res) {
@@ -23,6 +24,7 @@ app.get("/v2", function (req, res) {
 io.on("connection", function (socket) {
   const userId = socket.id;
   console.log("a user connected", userId);
+  io.to(userId).emit("ready", userId);
   // socket.broadcast.to(socket.id).emit('drawing', canvasData);
 
   socket.on("disconnect", function () {
